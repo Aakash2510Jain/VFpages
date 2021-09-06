@@ -1,0 +1,151 @@
+<apex:page controller="CustomPopupController" docType="html-5.0">
+    
+    <head>
+        <apex:slds/> 
+        <style type="text/css">
+            .popupBackground{
+            background-color:black;
+            opacity: 0.20;
+            filter: alpha(opacity = 20);
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 9998;
+            }
+            .custPopup{
+            background-color: white;
+            border-width: 2px;
+            border-style: solid;
+            z-index: 9999;
+            left: 50%;
+            padding:10px;
+            position: absolute;
+            width: 500px;
+            margin-left: -250px;
+            top:100px;
+            }
+            .lookupIconCustom {
+            background-image: url(/img/func_icons/util/lookup20.gif);
+            background-position: 0 0;
+            width: 20px;
+            height: 20px;
+            background-position: top left;
+            margin-right: .25em;
+            background-repeat: no-repeat;
+            }
+        </style>
+    </head>
+    <body class="slds-scope">
+        <apex:outputPanel id ="main_Container">
+            <apex:form >
+                <apex:actionFunction name="openModal" action="{!openPopup}" rerender="container" oncomplete="testHere()"/>
+                <apex:actionFunction name="closePopUp" action="{!Cancel}" rerender="main_Container" oncomplete="testHere()"/>
+                <apex:pageBlock > 
+                    Name :&nbsp;&nbsp; <apex:inputText label="Enter FirstName" id='selectedLookupId' value="{!finalisedContact.FirstName}" >
+                    </apex:inputText>
+                    
+                    <button onclick="openModal();return false;" class="lookupIconCustom" />
+                    <apex:outputPanel id="container">
+                        <apex:outputPanel id="tstpopup" rendered="{!showPopup}">
+                            <apex:outputPanel styleClass="popupBackground" layout="block" />
+                            <apex:outputPanel styleClass="custPopup" layout="block" >
+                                <center>
+                                    <h1>
+                                        <b>
+                                            Contact Details
+                                        </b>
+                                    </h1> 
+                                    <br/><br/>
+                                    <b>Enter First Name's initals :</b> &nbsp;<apex:inputText label="" onkeyup="searchAccRecords()" value="{!searchString}"/><br/><br/>                        
+                                    <apex:pageBlockTable value="{!viewRecords}" var="con" id="pageBlockTable">
+                                        <apex:column headerValue="First Name">          
+                                            <a onclick="fillingLookup('{!con.Id}');return false;" title="{!con.Id}" value="">{!con.FirstName}</a>                                
+                                        </apex:column>
+                                        <apex:column headerValue="Last Name">
+                                            <apex:outputField value="{!con.Lastname}"/>
+                                        </apex:column>
+                                        
+                                        <apex:column headerValue="Account Name">
+                                            <apex:outputField value="{!con.Account.Name}"/>
+                                        </apex:column>
+                                        
+                                        <apex:column headerValue="Email">
+                                            <apex:outputField value="{!con.Email}"/>
+                                        </apex:column>
+                                    </apex:pageBlockTable>
+                                    
+                                    <br/>
+                                    <apex:commandButton value="Ok" onclick="closePopUp();return false;" />
+                                    <apex:commandButton value="Cancel" onclick="closePopUp();return false;" />
+                                </center>
+                            </apex:outputPanel>
+                            <apex:actionFunction name="searchAccRecords" action="{!searchRecords}" rerender="pageBlockTable" oncomplete="testHere()"/>
+                            
+                            <apex:actionFunction name="fillingLookup" action="{!setLookup}" rerender="selectedLookupId" oncomplete="testHere()">
+                                <apex:param name="contactid" assignTo="{!selectedContactID}" value="" />
+                            </apex:actionFunction>
+                        </apex:outputPanel>
+                    </apex:outputPanel>
+                    
+                    
+                </apex:pageBlock>
+                
+            </apex:form>
+        </apex:outputPanel>
+    </body>
+</apex:page>
+----------------------------------------------------------------------------------------------------------------------
+controller
+--------------------------------------------------------------------------------------------------------------------------
+public with sharing class CustomPopupController {
+    
+    public boolean showPopup 					{get;set;}
+    public String searchString 					{get;set;}
+    public Contact finalisedContact				{get;set;}
+    public list<contact> dbRecords				{get;set;}
+    public List<Contact> viewRecords 			{get;set;}
+    public String selectedContactID 			{get;set;}
+    
+    public CustomPopupController ()
+    {
+        searchString= '';
+        dbRecords = [select id,FirstName,LastName,Account.Name,Email from Contact ];
+        this.viewRecords = dbRecords;
+        showPopup = false;
+    }
+    public void searchRecords(){
+        if(searchString != null){
+            viewRecords = new List<Contact>();
+            for(Contact contactRec : dbRecords) {
+                if((contactRec.FirstName != null && contactRec.FirstName.containsIgnoreCase(searchString)) || (contactRec.LastName != null && contactRec.LastName.containsIgnoreCase(searchString)))  {
+                    viewRecords.add(contactRec);
+                }    
+            }
+        }
+    }
+    
+    public void setLookup(){
+        system.debug('selectedContactID::'+selectedContactID);
+        
+        for(Contact contactRec : viewRecords) {
+            if(contactRec.id == selectedContactID)  {
+                finalisedContact = contactRec;
+            } 
+        }
+    }
+    
+    public void openPopup()
+    {
+        searchString = '';
+        viewRecords = dbRecords;
+        system.debug('For opening popup');
+        showPopup = true;
+    }
+    public void Cancel()
+    {
+        system.debug('For closing popup');
+        showPopup = false;
+    }    
+}
